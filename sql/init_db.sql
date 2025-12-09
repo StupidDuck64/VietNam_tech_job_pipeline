@@ -3,7 +3,15 @@
 -- Author: Data Engineering Team
 -- Date: December 2025
 
--- ===== 1. FACT TABLE - Bảng chứa dữ liệu chính về jobs =====
+-- ===== 1. DIMENSION TABLE - Công ty =====
+CREATE TABLE IF NOT EXISTS dim_companies (
+    company_id SERIAL PRIMARY KEY,
+    company_name VARCHAR(255) NOT NULL UNIQUE,
+    industry VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ===== 2. FACT TABLE - Bảng chứa dữ liệu chính về jobs =====
 CREATE TABLE IF NOT EXISTS fact_jobs (
     job_id SERIAL PRIMARY KEY,
     company_id INT NOT NULL,
@@ -17,14 +25,6 @@ CREATE TABLE IF NOT EXISTS fact_jobs (
     processed_at TIMESTAMP,
     data_quality_score FLOAT DEFAULT 1.0,
     FOREIGN KEY (company_id) REFERENCES dim_companies(company_id)
-);
-
--- ===== 2. DIMENSION TABLE - Công ty =====
-CREATE TABLE IF NOT EXISTS dim_companies (
-    company_id SERIAL PRIMARY KEY,
-    company_name VARCHAR(255) NOT NULL UNIQUE,
-    industry VARCHAR(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ===== 3. DIMENSION TABLE - Kỹ năng =====
@@ -69,12 +69,33 @@ CREATE TABLE IF NOT EXISTS staging_raw_jobs (
 );
 
 -- ===== CREATE INDEXES - Tối ưu query performance =====
-CREATE INDEX idx_fact_jobs_company_id ON fact_jobs(company_id);
-CREATE INDEX idx_fact_jobs_location ON fact_jobs(location);
-CREATE INDEX idx_fact_jobs_posted_date ON fact_jobs(posted_date);
-CREATE INDEX idx_bridge_job_id ON bridge_job_skills(job_id);
-CREATE INDEX idx_bridge_skill_id ON bridge_job_skills(skill_id);
-CREATE INDEX idx_dim_skills_name ON dim_skills(skill_name);
+-- Sử dụng IF NOT EXISTS để tránh lỗi khi chạy lại
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_fact_jobs_company_id') THEN
+        CREATE INDEX idx_fact_jobs_company_id ON fact_jobs(company_id);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_fact_jobs_location') THEN
+        CREATE INDEX idx_fact_jobs_location ON fact_jobs(location);
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_fact_jobs_posted_date') THEN
+        CREATE INDEX idx_fact_jobs_posted_date ON fact_jobs(posted_date);
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_bridge_job_id') THEN
+        CREATE INDEX idx_bridge_job_id ON bridge_job_skills(job_id);
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_bridge_skill_id') THEN
+        CREATE INDEX idx_bridge_skill_id ON bridge_job_skills(skill_id);
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_dim_skills_name') THEN
+        CREATE INDEX idx_dim_skills_name ON dim_skills(skill_name);
+    END IF;
+END $$;
 
 -- ===== VIEWS - Cho phục vụ báo cáo =====
 

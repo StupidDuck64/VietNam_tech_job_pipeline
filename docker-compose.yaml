@@ -54,6 +54,25 @@ services:
       - AIRFLOW__CORE__DAGS_FOLDER=${AIRFLOW__CORE__DAGS_FOLDER}
       - AIRFLOW__CORE__LOAD_EXAMPLES=${AIRFLOW__CORE__LOAD_EXAMPLES}
       - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=true
+      - AIRFLOW__WEBSERVER__SECRET_KEY=this_is_a_very_secure_secret_key_for_airflow_demo
+      # Connection cho PostgresOperator
+      - AIRFLOW_CONN_POSTGRES_DEFAULT=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - ITVIEC_SESSION_COOKIE=${ITVIEC_SESSION_COOKIE}
+      - CFUVID_COOKIE=${CFUVID_COOKIE}
+      - GA_COOKIE=${GA_COOKIE}
+      - CFZ_ADOBE_COOKIE=${CFZ_ADOBE_COOKIE}
+      - CFZ_GOOGLE_COOKIE=${CFZ_GOOGLE_COOKIE}
+      - KNDCTR_COOKIE=${KNDCTR_COOKIE}
+      - MONGO_HOST=${MONGO_HOST}
+      - MONGO_PORT=${MONGO_PORT}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_DB=${MONGO_DB}
+      - TARGET_URL=${TARGET_URL}
+      - MAX_PAGES=${MAX_PAGES}
+      - JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+      - PYSPARK_PYTHON=python3
+      - PYSPARK_DRIVER_PYTHON=python3
     ports:
       - "8080:8080"
     volumes:
@@ -83,6 +102,25 @@ services:
       - AIRFLOW_HOME=${AIRFLOW_HOME}
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN}
       - AIRFLOW__CORE__DAGS_FOLDER=${AIRFLOW__CORE__DAGS_FOLDER}
+      - AIRFLOW__WEBSERVER__SECRET_KEY=this_is_a_very_secure_secret_key_for_airflow_demo
+      # Connection cho PostgresOperator
+      - AIRFLOW_CONN_POSTGRES_DEFAULT=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - ITVIEC_SESSION_COOKIE=${ITVIEC_SESSION_COOKIE}
+      - CFUVID_COOKIE=${CFUVID_COOKIE}
+      - GA_COOKIE=${GA_COOKIE}
+      - CFZ_ADOBE_COOKIE=${CFZ_ADOBE_COOKIE}
+      - CFZ_GOOGLE_COOKIE=${CFZ_GOOGLE_COOKIE}
+      - KNDCTR_COOKIE=${KNDCTR_COOKIE}
+      - MONGO_HOST=${MONGO_HOST}
+      - MONGO_PORT=${MONGO_PORT}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_DB=${MONGO_DB}
+      - TARGET_URL=${TARGET_URL}
+      - MAX_PAGES=${MAX_PAGES}
+      - JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+      - PYSPARK_PYTHON=python3
+      - PYSPARK_DRIVER_PYTHON=python3
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs

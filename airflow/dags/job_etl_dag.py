@@ -40,7 +40,8 @@ MONGO_PORT = os.getenv('MONGO_PORT', '27017')
 MONGO_USERNAME = os.getenv('MONGO_INITDB_ROOT_USERNAME', 'admin')
 MONGO_PASSWORD = os.getenv('MONGO_INITDB_ROOT_PASSWORD', 'mongodb_password')
 MONGO_DB = os.getenv('MONGO_DB', 'job_db')
-TARGET_URL = os.getenv('TARGET_URL', 'https://itviec.com/it-jobs/data-engineer')
+TARGET_URL = os.getenv('TARGET_URL', 'https://itviec.com/it-jobs')
+MAX_PAGES = int(os.getenv('MAX_PAGES', '5'))
 
 # ===== Default DAG arguments =====
 default_args = {
@@ -86,9 +87,9 @@ def scrape_jobs_task(**context):
         # ===== Kết nối MongoDB =====
         scraper.connect_mongodb()
         
-        # ===== Cào dữ liệu (cào 3 trang) =====
-        logger.info(f"🚀 Cào từ URL: {TARGET_URL}")
-        jobs = scraper.scrape_jobs(TARGET_URL, max_pages=3)
+        # ===== Cào dữ liệu (cào nhiều trang) =====
+        logger.info(f"🚀 Cào TẤT CẢ IT Jobs từ URL: {TARGET_URL} (max {MAX_PAGES} trang)")
+        jobs = scraper.scrape_jobs(TARGET_URL, max_pages=MAX_PAGES)
         
         # ===== Lưu vào MongoDB =====
         success = scraper.save_to_mongodb(jobs)
@@ -213,10 +214,14 @@ task_validate = PythonOperator(
 
 
 # ===== Task 4: Setup Database Schema (PostgreSQL) =====
+# Đọc file SQL trực tiếp thay vì dùng template
+with open('/opt/airflow/sql/init_db.sql', 'r') as f:
+    init_sql = f.read()
+
 task_setup_db = PostgresOperator(
     task_id='setup_database_schema',
     postgres_conn_id='postgres_default',
-    sql='/opt/airflow/sql/init_db.sql',
+    sql=init_sql,
     autocommit=True,
     dag=dag,
 )
