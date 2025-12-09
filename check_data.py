@@ -22,6 +22,13 @@ try:
     # 1. Kiểm tra Raw Data
     raw_count = db.raw_jobs.count_documents({})
     print(f"📊 Số lượng Raw Jobs (raw_jobs): {raw_count}")
+    
+    if raw_count > 0:
+        print("📝 Mẫu dữ liệu Raw (1 document):")
+        sample_raw = db.raw_jobs.find_one()
+        if sample_raw and '_id' in sample_raw:
+            sample_raw['_id'] = str(sample_raw['_id'])
+        pprint.pprint(sample_raw)
 
     # 2. Kiểm tra Processed Data
     processed_count = db.processed_jobs.count_documents({})

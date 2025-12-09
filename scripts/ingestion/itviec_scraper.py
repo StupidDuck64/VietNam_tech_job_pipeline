@@ -16,6 +16,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium_stealth import stealth
 from bs4 import BeautifulSoup
 from pymongo import MongoClient, errors
 import json
@@ -79,13 +80,22 @@ class ITviecScraper:
             logger.info("🚗 Đang khởi tạo Chrome WebDriver...")
             
             chrome_options = Options()
-            chrome_options.add_argument('--headless')  # Chạy không hiển thị giao diện
+            # chrome_options.add_argument('--headless')  # Tạm tắt headless để debug (nếu chạy local)
+            chrome_options.add_argument('--headless=new') # Chế độ headless mới của Chrome, ít bị detect hơn
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
             chrome_options.add_argument('--disable-gpu')
             chrome_options.add_argument('--disable-blink-features=AutomationControlled')
             chrome_options.add_argument('--window-size=1920,1080')
             chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+            
+            # Thêm các arguments để bypass Cloudflare
+            chrome_options.add_argument("--disable-extensions")
+            chrome_options.add_argument("--proxy-server='direct://'")
+            chrome_options.add_argument("--proxy-bypass-list=*")
+            chrome_options.add_argument("--start-maximized")
+            chrome_options.add_argument('--allow-running-insecure-content')
+            chrome_options.add_argument('--ignore-certificate-errors')
             
             # Tắt automation flags
             chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -95,10 +105,17 @@ class ITviecScraper:
             # Chrome đã được cài trong container, dùng default chromedriver
             self.driver = webdriver.Chrome(options=chrome_options)
             
-            # Loại bỏ webdriver property
-            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            # Apply selenium-stealth
+            stealth(self.driver,
+                languages=["en-US", "en"],
+                vendor="Google Inc.",
+                platform="Win32",
+                webgl_vendor="Intel Inc.",
+                renderer="Intel Iris OpenGL Engine",
+                fix_hairline=True,
+            )
             
-            logger.info("✅ Chrome WebDriver đã sẵn sàng")
+            logger.info("✅ Chrome WebDriver đã khởi tạo thành công (với Stealth)")
             
         except Exception as e:
             logger.error(f"❌ Lỗi khởi tạo WebDriver: {e}")
@@ -197,74 +214,64 @@ class ITviecScraper:
             dict chứa thông tin job
         """
         try:
-            # Job Title - Thử nhiều selector khác nhau
+            # Job Title & URL
+            # Title nằm trong thẻ h3, URL nằm trong attribute data-url của h3
             title_elem = job_html.find('h3')
-            if not title_elem:
-                title_elem = job_html.find('div', class_='title')
-            if not title_elem:
-                title_elem = job_html.find('a', class_='job-title')
-                
-            title = title_elem.get_text(strip=True) if title_elem else "N/A"
-            
-            # Job URL
-            # Tìm thẻ a có href, ưu tiên thẻ a nằm trong h3 hoặc có class title
-            link_elem = None
-            if title_elem and title_elem.name == 'a':
-                link_elem = title_elem
-            elif title_elem and title_elem.find('a'):
-                link_elem = title_elem.find('a')
+            if title_elem:
+                title = title_elem.get_text(strip=True)
+                job_url = title_elem.get('data-url')
+                if not job_url:
+                    # Fallback nếu không có data-url
+                    a_tag = title_elem.find('a')
+                    if a_tag:
+                        job_url = a_tag.get('href')
             else:
-                # Tìm thẻ a bất kỳ trong card
-                link_elem = job_html.find('a', href=True)
+                title = "N/A"
+                job_url = "N/A"
             
-            job_url = "N/A"
-            if link_elem and link_elem.get('href'):
-                href = link_elem['href']
-                if href.startswith('/'):
-                    job_url = f"https://itviec.com{href}"
-                else:
-                    job_url = href
+            # Chuẩn hóa URL
+            if job_url and job_url != "N/A" and not job_url.startswith('http'):
+                job_url = f"https://itviec.com{job_url}"
 
             # Company Name
-            company_elem = job_html.find('div', class_='company-name') or \
-                           job_html.find('span', class_='company') or \
-                           job_html.find('a', class_='company-name')
-            company = company_elem.get_text(strip=True) if company_elem else "N/A"
+            # Tìm tất cả thẻ a có href chứa /companies/
+            company_links = job_html.find_all('a', href=lambda x: x and '/companies/' in x)
+            company = "N/A"
+            for link in company_links:
+                text = link.get_text(strip=True)
+                if text:
+                    company = text
+                    break
             
             # Location
-            location_elem = job_html.find('div', class_='location') or \
-                            job_html.find('span', class_='text') or \
-                            job_html.find('div', class_='city')
+            # Tìm div có các class này (dùng CSS selector cho chính xác)
+            location_elem = job_html.select_one('.text-rich-grey.text-truncate.text-nowrap')
             location = location_elem.get_text(strip=True) if location_elem else "N/A"
             
-            # Salary (nếu có)
-            salary_elem = job_html.find('div', class_='salary') or \
-                          job_html.find('span', class_='salary-text')
+            # Salary
+            salary_elem = job_html.find('div', class_='salary')
             salary = salary_elem.get_text(strip=True) if salary_elem else "N/A"
             
-            # Skills/Tags
+            # Skills (Tags)
             skills = []
-            skill_tags = job_html.find_all('span', class_='tag') or \
-                         job_html.find_all('a', class_='skill-tag') or \
-                         job_html.find_all('div', class_='tag-list')
-            
-            for tag in skill_tags:
-                skill_text = tag.get_text(strip=True)
-                if skill_text:
-                    skills.append(skill_text)
-            
+            tag_list = job_html.find('div', attrs={'data-controller': 'responsive-tag-list'})
+            if tag_list:
+                skills = [tag.get_text(strip=True) for tag in tag_list.find_all('a')]
+
             return {
-                'title': title,
-                'company': company,
-                'location': location,
-                'salary': salary,
-                'skills': skills,
-                'url': job_url,
-                'scraped_at': datetime.utcnow().isoformat()
+                "title": title,
+                "url": job_url,
+                "company": company,
+                "location": location,
+                "salary": salary,
+                "skills": skills,
+                "scraped_at": datetime.utcnow().isoformat()
             }
-            
+
         except Exception as e:
-            logger.warning(f"⚠️ Lỗi parse job: {e}")
+            logger.error(f"❌ Lỗi parse job: {e}")
+            return None
+
             return None
     
     def scrape_jobs(self, base_url: str, max_pages: int = 5) -> list:
@@ -325,6 +332,23 @@ class ITviecScraper:
                     # Lấy HTML của trang
                     html = self.fetch_page(url)
                     
+                    # Kiểm tra Cloudflare Challenge trong HTML
+                    if "Verify you are human" in html or "Just a moment" in html:
+                        # Nếu file lớn (>100KB), có thể là false positive?
+                        if len(html) > 100000:
+                             logger.info(f"⚠️ Phát hiện từ khóa Cloudflare nhưng HTML lớn ({len(html)} bytes) -> False Positive. Tiếp tục parse...")
+                        else:
+                            logger.warning(f"⚠️ Cloudflare Challenge detected for {keyword}. Saving HTML for debug...")
+                            try:
+                                with open(f"/tmp/debug_{keyword}_challenge.html", "w", encoding="utf-8") as f:
+                                    f.write(html)
+                            except Exception as e:
+                                logger.warning(f"Không thể lưu file debug: {e}")
+                                
+                            logger.warning("Waiting 60s...")
+                            time.sleep(60)
+                            html = self.fetch_page(url) # Retry 1 lần
+
                     # Kiểm tra nếu bị block (HTML quá ngắn)
                     if len(html) < 30000:
                         logger.warning(f"⚠️ HTML quá ngắn ({len(html)} bytes), có thể bị block. Đợi 30s và thử lại...")
