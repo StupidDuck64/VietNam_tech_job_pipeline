@@ -41,7 +41,8 @@ MONGO_USERNAME = os.getenv('MONGO_INITDB_ROOT_USERNAME', 'admin')
 MONGO_PASSWORD = os.getenv('MONGO_INITDB_ROOT_PASSWORD', 'mongodb_password')
 MONGO_DB = os.getenv('MONGO_DB', 'job_db')
 TARGET_URL = os.getenv('TARGET_URL', 'https://itviec.com/it-jobs')
-MAX_PAGES = int(os.getenv('MAX_PAGES', '5'))
+# Tăng giới hạn mặc định lên 50 để cào hết danh sách keywords
+MAX_PAGES = int(os.getenv('MAX_PAGES', '50'))
 
 # ===== Default DAG arguments =====
 default_args = {
