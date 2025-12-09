@@ -288,18 +288,33 @@ class ITviecScraper:
         """
         all_jobs = []
         
-        # Danh sách keywords phổ biến để cào
-        # keywords = [
-        #     "java", "python", "react", "javascript", "net", 
-        #     "tester", "php", "android", "ios", "node-js",
-        #     "business-analyst", "project-manager", "data-engineer"
-        # ]
+        # Danh sách keywords phổ biến để cào (Mở rộng để lấy nhiều job)
+        keywords = [
+            # --- Languages ---
+            "java", "python", "javascript", "typescript", "c-sharp", "php", "golang", "ruby", "c-plus-plus", "swift", "kotlin", "rust", "scala",
+            # --- Frameworks/Libs ---
+            "reactjs", "angular", "vuejs", "node-js", "spring-boot", "django", "laravel", "flutter", "react-native", ".net",
+            # --- Roles ---
+            "backend-developer", "frontend-developer", "fullstack-developer", "mobile-developer", "ios", "android", 
+            "devops-engineer", "automation-tester", "manual-tester", "qa-qc", 
+            "business-analyst", "project-manager", "product-owner", "product-manager", 
+            "data-engineer", "data-analyst", "data-scientist", "ai-engineer",
+            "system-admin", "network-engineer", "solution-architect", "ui-ux-designer",
+            # --- Cloud/Tools ---
+            "aws", "azure", "google-cloud", "docker", "kubernetes"
+        ]
         
         # TEST MODE: Chỉ cào 1 keyword để test nhanh
-        keywords = ["java"]
+        # keywords = ["java"]
         
         # Giới hạn số lượng keyword nếu cần
-        target_keywords = keywords[:max_pages] if max_pages > 0 else keywords
+        # Nếu max_pages được set nhỏ (ví dụ 5 từ DAG), ta sẽ bỏ qua nó để lấy hết danh sách keyword
+        # Hoặc chỉ dùng nó nếu muốn test nhanh
+        target_keywords = keywords
+        if 0 < max_pages < 5: # Chỉ limit nếu max_pages rất nhỏ (chế độ test)
+             target_keywords = keywords[:max_pages]
+        
+        logger.info(f"🚀 Sẽ cào dữ liệu với {len(target_keywords)} keywords: {target_keywords}")
         
         # Khởi tạo driver
         self._init_driver()
