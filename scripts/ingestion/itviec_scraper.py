@@ -65,7 +65,16 @@ class ITviecScraper:
         self.collection = None
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9,vi;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Cache-Control': 'max-age=0'
         })
         
     def connect_mongodb(self):
@@ -90,24 +99,42 @@ class ITviecScraper:
             self.client.close()
             logger.info("✅ Ngắt kết nối MongoDB")
     
-    def fetch_page(self, url: str) -> str:
+    def fetch_page(self, url: str, max_retries: int = 3) -> str:
         """
-        Lấy HTML từ URL
+        Lấy HTML từ URL với retry logic
         
         Args:
             url: URL của trang web
+            max_retries: Số lần retry tối đa
             
         Returns:
             HTML content (str)
         """
-        try:
-            response = self.session.get(url, timeout=10)
-            response.raise_for_status()
-            logger.info(f"✅ Lấy dữ liệu từ: {url}")
-            return response.text
-        except requests.RequestException as e:
-            logger.error(f"❌ Lỗi fetch page: {e}")
-            raise
+        for attempt in range(max_retries):
+            try:
+                # Thêm delay ngẫu nhiên để tránh pattern detection
+                if attempt > 0:
+                    wait_time = (2 ** attempt) + (attempt * 0.5)  # Exponential backoff
+                    logger.info(f"⏳ Retry {attempt}/{max_retries} sau {wait_time}s...")
+                    time.sleep(wait_time)
+                
+                response = self.session.get(url, timeout=15)
+                response.raise_for_status()
+                logger.info(f"✅ Lấy dữ liệu từ: {url}")
+                return response.text
+                
+            except requests.HTTPError as e:
+                if e.response.status_code == 403:
+                    logger.warning(f"⚠️ 403 Forbidden (attempt {attempt + 1}/{max_retries})")
+                    if attempt == max_retries - 1:
+                        logger.error(f"❌ Hết retry, vẫn bị 403: {url}")
+                        raise
+                else:
+                    raise
+            except requests.RequestException as e:
+                logger.error(f"❌ Lỗi fetch page (attempt {attempt + 1}): {e}")
+                if attempt == max_retries - 1:
+                    raise
     
     def parse_job_listing(self, job_html) -> dict:
         """
@@ -193,8 +220,11 @@ class ITviecScraper:
                     if job_data:
                         all_jobs.append(job_data)
                 
-                # ===== Delay để tránh bị chặn IP =====
-                time.sleep(SCRAPE_DELAY)
+                # ===== Delay để tránh bị chặn IP (với random jitter) =====
+                import random
+                delay = SCRAPE_DELAY + random.uniform(0.5, 2.0)
+                logger.info(f"⏳ Chờ {delay:.1f}s trước khi cào trang tiếp...")
+                time.sleep(delay)
                 
             except Exception as e:
                 logger.error(f"❌ Lỗi khi cào trang {page}: {e}")

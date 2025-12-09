@@ -61,6 +61,7 @@ services:
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
       - ./scripts:/opt/airflow/scripts
+      - ./sql:/opt/airflow/sql
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,6 +88,7 @@ services:
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
       - ./scripts:/opt/airflow/scripts
+      - ./sql:/opt/airflow/sql
     depends_on:
       - postgres
       - mongodb
