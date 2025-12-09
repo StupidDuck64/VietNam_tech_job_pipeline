@@ -1,0 +1,146 @@
+# ===== Docker Compose Config cho toàn bộ Infrastructure =====
+# Bao gồm: PostgreSQL, MongoDB, Airflow, và Spark (optional)
+# Compatible with Docker Compose v2.x (không cần khai báo version)
+
+services:
+  # ===== PostgreSQL (Metadata Store + Data Warehouse) =====
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - airflow_network
+
+  # ===== MongoDB (Raw Data Storage) =====
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb_service
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - airflow_network
+
+  # ===== Airflow Webserver =====
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: docker/airflow.Dockerfile
+    container_name: airflow_webserver
+    environment:
+      - AIRFLOW_HOME=${AIRFLOW_HOME}
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN}
+      - AIRFLOW__CORE__DAGS_FOLDER=${AIRFLOW__CORE__DAGS_FOLDER}
+      - AIRFLOW__CORE__LOAD_EXAMPLES=${AIRFLOW__CORE__LOAD_EXAMPLES}
+      - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=true
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./scripts:/opt/airflow/scripts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      bash -c "airflow db upgrade &&
+               airflow users create --role Admin --username airflow --email airflow@example.com --firstname Airflow --lastname Admin --password airflow || true &&
+               airflow webserver"
+    networks:
+      - airflow_network
+    restart: on-failure
+
+  # ===== Airflow Scheduler =====
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: docker/airflow.Dockerfile
+    container_name: airflow_scheduler
+    environment:
+      - AIRFLOW_HOME=${AIRFLOW_HOME}
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN}
+      - AIRFLOW__CORE__DAGS_FOLDER=${AIRFLOW__CORE__DAGS_FOLDER}
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./scripts:/opt/airflow/scripts
+    depends_on:
+      - postgres
+      - mongodb
+      - airflow-webserver
+    command: airflow scheduler
+    networks:
+      - airflow_network
+    restart: on-failure
+
+  # ===== Spark Master (Optional - Chỉ nếu cần Cluster Mode) =====
+  spark-master:
+    build:
+      context: .
+      dockerfile: docker/spark.Dockerfile
+    container_name: spark_master
+    ports:
+      - "8888:8080"  # Spark UI
+      - "7077:7077"  # Spark Master Port
+    environment:
+      - SPARK_MODE=master
+    volumes:
+      - ./scripts:/opt/spark/scripts
+      - ./data:/opt/spark/data
+    networks:
+      - airflow_network
+    restart: on-failure
+
+  # ===== Spark Worker (Optional) =====
+  spark-worker:
+    build:
+      context: .
+      dockerfile: docker/spark.Dockerfile
+    container_name: spark_worker
+    ports:
+      - "8081:8081"  # Worker UI
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+    depends_on:
+      - spark-master
+    volumes:
+      - ./scripts:/opt/spark/scripts
+      - ./data:/opt/spark/data
+    networks:
+      - airflow_network
+    restart: on-failure
+
+# ===== Volumes =====
+volumes:
+  postgres_data:
+  mongodb_data:
+
+# ===== Networks =====
+networks:
+  airflow_network:
+    driver: bridge
