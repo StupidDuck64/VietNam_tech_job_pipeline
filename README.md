@@ -39,37 +39,59 @@ For detailed architecture design, please refer to [ARCHITECTURE.md](ARCHITECTURE
 
 ## 🚀 Getting Started
 
-### Prerequisites
-*   Docker & Docker Compose installed.
-*   Git.
+### 📋 System Requirements
+*   **OS**: Windows, macOS, or Linux.
+*   **Docker Desktop**: v4.0+ (Ensure it is running).
+*   **RAM**: Minimum 8GB (16GB recommended for Spark + Airflow).
+*   **Disk Space**: At least 10GB free.
 
-### Installation
+### 🔧 Step 1: Environment Setup
+1.  **Install Docker Desktop**: Download from [docker.com](https://www.docker.com/products/docker-desktop).
+2.  **Verify Installation**:
+    ```bash
+    docker --version
+    docker-compose --version
+    ```
 
-1.  **Clone the repository**
+### 📂 Step 2: Installation
+1.  **Clone the repository**:
     ```bash
     git clone https://github.com/yourusername/vn-it-job-analytics.git
     cd vn-it-job-analytics
     ```
+2.  **Check Project Structure**: Ensure you see folders like `airflow/`, `data/`, `docker/`, etc.
+3.  **Environment Variables**: The project uses a `.env` file. If missing, create one or use the defaults in `docker-compose.yaml`.
 
-2.  **Setup Environment**
-    Create a `.env` file (or use the default provided in `docker-compose.yaml`):
+### 🐳 Step 3: Start Infrastructure
+1.  **Build and Start Containers**:
     ```bash
-    cp .env.example .env
+    docker-compose up -d --build
     ```
+    *This process may take 5-10 minutes initially to build the custom Airflow and Spark images.*
 
-3.  **Start the Infrastructure**
+2.  **Check Running Containers**:
     ```bash
-    docker-compose up -d
+    docker-compose ps
     ```
-    *This will start Airflow (Webserver, Scheduler), Spark (Master, Worker), MongoDB, and PostgreSQL.*
+    Ensure `airflow-webserver`, `airflow-scheduler`, `spark-master`, `spark-worker`, `postgres`, and `mongodb` are `Up`.
 
-4.  **Access Interfaces**
-    *   **Airflow UI**: [http://localhost:8080](http://localhost:8080) (User/Pass: `airflow`/`airflow`)
-    *   **Spark Master**: [http://localhost:8080](http://localhost:8080) (Note: Port might conflict, check `docker-compose.yaml` mapping, usually mapped to 8888 or similar if changed)
+### 🖥️ Step 4: Access Interfaces
+*   **Airflow UI**: [http://localhost:8080](http://localhost:8080)
+    *   **Username**: `airflow`
+    *   **Password**: `airflow`
+*   **Spark Master UI**: [http://localhost:8888](http://localhost:8888)
+*   **Spark Worker UI**: [http://localhost:8081](http://localhost:8081)
 
-5.  **Trigger the Pipeline**
-    *   Go to Airflow UI.
-    *   Enable and trigger the `job_etl_dag`.
+### ⚡ Step 5: Run the Pipeline
+1.  Access the **Airflow UI**.
+2.  Locate the `job_etl_dag`.
+3.  Toggle the **ON/OFF** switch to **ON**.
+4.  Click the **Trigger DAG** (Play button) to start the pipeline manually.
+5.  Monitor the task progress in the **Graph View**.
+
+### ❓ Troubleshooting
+*   **Port Conflicts**: If port 8080 is taken, change `AIRFLOW_PORT` in `.env` or `docker-compose.yaml`.
+*   **Memory Issues**: If containers crash, increase Docker memory limit to 8GB+.
 
 ## 📂 Project Structure
 
