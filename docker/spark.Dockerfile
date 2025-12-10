@@ -1,5 +1,5 @@
 # ===== Dockerfile cho Spark =====
-# Image này sẽ chạy Spark Master và Worker
+# Image này sẽ chạy Spark Master và Worker (Customized)
 
 FROM apache/spark:3.5.0-python3
 

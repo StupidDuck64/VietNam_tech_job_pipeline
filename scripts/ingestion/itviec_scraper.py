@@ -5,7 +5,7 @@ Sử dụng: Selenium + Chrome headless + BeautifulSoup
 Lưu vào: MongoDB
 
 Author: Data Engineering Team  
-Date: December 2025
+Date: December 2025 (Updated)
 """
 
 from selenium import webdriver

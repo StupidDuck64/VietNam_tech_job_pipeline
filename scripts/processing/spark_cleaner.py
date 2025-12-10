@@ -6,7 +6,7 @@ Script xử lý dữ liệu từ MongoDB bằng PySpark
 - Lưu dữ liệu đã xử lý vào Parquet hoặc PostgreSQL
 
 Author: Data Engineering Team
-Date: December 2025
+Date: December 2025 (Updated)
 """
 
 from pyspark.sql import SparkSession

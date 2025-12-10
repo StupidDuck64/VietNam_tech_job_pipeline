@@ -1,3 +1,7 @@
+"""
+Script kiểm tra dữ liệu trong MongoDB
+Author: Data Engineering Team
+"""
 
 import os
 from pymongo import MongoClient

@@ -1,7 +1,7 @@
 -- ===== VN IT Job Analytics - Database Schema =====
 -- Thiết kế Star Schema cho Data Warehouse
 -- Author: Data Engineering Team
--- Date: December 2025
+-- Date: December 2025 (Updated)
 
 -- ===== 1. DIMENSION TABLE - Công ty =====
 CREATE TABLE IF NOT EXISTS dim_companies (
