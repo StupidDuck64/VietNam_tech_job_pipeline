@@ -177,20 +177,3 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ===== SAMPLE DATA INSERTION (Optional) =====
--- Chỉ sử dụng khi test, xóa trong production
-
--- INSERT INTO dim_companies (company_name, industry) VALUES
--- ('Google Vietnam', 'Technology'),
--- ('Facebook Vietnam', 'Technology'),
--- ('Grab Vietnam', 'Technology');
-
--- INSERT INTO dim_skills (skill_name, skill_category) VALUES
--- ('Python', 'Backend'),
--- ('Java', 'Backend'),
--- ('JavaScript', 'Frontend'),
--- ('SQL', 'Data'),
--- ('Spark', 'Data'),
--- ('AWS', 'DevOps'),
--- ('Docker', 'DevOps'),
--- ('Kubernetes', 'DevOps');

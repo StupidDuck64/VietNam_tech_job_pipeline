@@ -87,9 +87,9 @@ class SparkDataCleaner:
                 .config("spark.driver.bindAddress", "0.0.0.0") \
                 .getOrCreate()
             
-            logger.info("✅ Spark session tạo thành công")
+            logger.info("Spark session tạo thành công")
         except Exception as e:
-            logger.error(f"❌ Lỗi tạo Spark session: {e}")
+            logger.error(f"Lỗi tạo Spark session: {e}")
             raise
     
     def read_from_mongodb(self, collection_name: str = "raw_jobs"):
@@ -110,7 +110,7 @@ class SparkDataCleaner:
             
             # Kiểm tra nếu DataFrame rỗng
             if df.rdd.isEmpty():
-                logger.warning(f"⚠️ MongoDB collection {collection_name} trống. Trả về DataFrame rỗng.")
+                logger.warning(f"MongoDB collection {collection_name} trống. Trả về DataFrame rỗng.")
                 # Tạo schema rỗng để tránh lỗi các bước sau
                 schema = StructType([
                     StructField("title", StringType(), True),
@@ -123,11 +123,11 @@ class SparkDataCleaner:
                 ])
                 return self.spark.createDataFrame([], schema)
 
-            logger.info(f"✅ Đọc {df.count()} records từ MongoDB collection: {collection_name}")
+            logger.info(f"Đọc {df.count()} records từ MongoDB collection: {collection_name}")
             return df
         
         except Exception as e:
-            logger.error(f"❌ Lỗi đọc từ MongoDB: {e}")
+            logger.error(f"Lỗi đọc từ MongoDB: {e}")
             # Trả về empty DF thay vì raise để pipeline không crash nếu DB chưa có data
             schema = StructType([
                 StructField("title", StringType(), True),
@@ -158,11 +158,7 @@ class SparkDataCleaner:
                 regexp_replace(col(column_name), r'<[^>]+>', '')
             )
             
-            # df = df.withColumn(
-            #     column_name,
-            #     # ===== Xóa emoji (Tạm tắt do lỗi regex Java) =====
-            #     regexp_replace(col(column_name), r'[\U0001F300-\U0001F9FF]|\u200d|\ufe0f', '')
-            # )
+            
             
             df = df.withColumn(
                 column_name,
@@ -182,11 +178,11 @@ class SparkDataCleaner:
                 lower(col(column_name))
             )
             
-            logger.info(f"✅ Làm sạch cột: {column_name}")
+            logger.info(f"Làm sạch cột: {column_name}")
             return df
         
         except Exception as e:
-            logger.error(f"❌ Lỗi làm sạch text: {e}")
+            logger.error(f"Lỗi làm sạch text: {e}")
             return df
     
     def normalize_salary(self, df) -> object:
@@ -224,11 +220,11 @@ class SparkDataCleaner:
             # ===== Xóa cột salary cũ =====
             df = df.drop('salary')
             
-            logger.info("✅ Chuẩn hóa cột lương")
+            logger.info("Chuẩn hóa cột lương")
             return df
         
         except Exception as e:
-            logger.error(f"❌ Lỗi chuẩn hóa lương: {e}")
+            logger.error(f"Lỗi chuẩn hóa lương: {e}")
             return df
     
     def extract_skills(self, df, description_column: str = "description_preview") -> object:
@@ -248,7 +244,6 @@ class SparkDataCleaner:
             skills_pattern = '|'.join(SKILLS_LIST)
             
             # ===== Trích xuất skills từ description =====
-            # Sử dụng regex để tìm tất cả matching skills
             df = df.withColumn(
                 'skills',
                 explode(
@@ -262,11 +257,11 @@ class SparkDataCleaner:
                 )
             )
             
-            logger.info("✅ Trích xuất kỹ năng từ Job Description")
+            logger.info("Trích xuất kỹ năng từ Job Description")
             return df
         
         except Exception as e:
-            logger.error(f"❌ Lỗi trích xuất skills: {e}")
+            logger.error(f"Lỗi trích xuất skills: {e}")
             return df
     
     def deduplicate_skills(self, df) -> object:
@@ -296,11 +291,11 @@ class SparkDataCleaner:
             
             df_agg = df_agg.drop('skills_list')
             
-            logger.info("✅ Loại bỏ skills trùng lặp")
+            logger.info("Loại bỏ skills trùng lặp")
             return df_agg
         
         except Exception as e:
-            logger.error(f"❌ Lỗi dedup skills: {e}")
+            logger.error(f"Lỗi dedup skills: {e}")
             return df
     
     def add_metadata(self, df) -> object:
@@ -317,11 +312,11 @@ class SparkDataCleaner:
             df = df.withColumn('processed_at', lit(datetime.now().isoformat())) \
                    .withColumn('data_quality_score', lit(1.0))  # Placeholder
             
-            logger.info("✅ Thêm metadata vào DataFrame")
+            logger.info("Thêm metadata vào DataFrame")
             return df
         
         except Exception as e:
-            logger.error(f"❌ Lỗi thêm metadata: {e}")
+            logger.error(f"Lỗi thêm metadata: {e}")
             return df
     
     def write_to_parquet(self, df, output_path: str):
@@ -334,9 +329,9 @@ class SparkDataCleaner:
         """
         try:
             df.write.mode("overwrite").parquet(output_path)
-            logger.info(f"✅ Lưu dữ liệu vào Parquet: {output_path}")
+            logger.info(f"Lưu dữ liệu vào Parquet: {output_path}")
         except Exception as e:
-            logger.error(f"❌ Lỗi lưu Parquet: {e}")
+            logger.error(f"Lỗi lưu Parquet: {e}")
 
     def write_to_mongodb(self, df, collection_name: str = "processed_jobs"):
         """
@@ -351,9 +346,9 @@ class SparkDataCleaner:
                 .mode("append") \
                 .option("uri", f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}.{collection_name}?authSource=admin") \
                 .save()
-            logger.info(f"✅ Lưu dữ liệu vào MongoDB collection: {collection_name}")
+            logger.info(f"Lưu dữ liệu vào MongoDB collection: {collection_name}")
         except Exception as e:
-            logger.error(f"❌ Lỗi lưu MongoDB: {e}")
+            logger.error(f"Lỗi lưu MongoDB: {e}")
     
     def write_to_postgresql(self, df, table_name: str):
         """
@@ -376,17 +371,17 @@ class SparkDataCleaner:
                 .mode("append") \
                 .save()
             
-            logger.info(f"✅ Lưu dữ liệu vào PostgreSQL table: {table_name}")
+            logger.info(f"Lưu dữ liệu vào PostgreSQL table: {table_name}")
         
         except Exception as e:
-            logger.error(f"❌ Lỗi lưu PostgreSQL: {e}")
+            logger.error(f"Lỗi lưu PostgreSQL: {e}")
     
     def process_pipeline(self):
         """
         Chạy toàn bộ processing pipeline
         """
         try:
-            logger.info("🚀 Bắt đầu Spark processing pipeline")
+            logger.info("Bắt đầu Spark processing pipeline")
             
             # ===== Step 1: Đọc dữ liệu từ MongoDB =====
             df = self.read_from_mongodb("raw_jobs")
@@ -407,7 +402,7 @@ class SparkDataCleaner:
             df = self.add_metadata(df)
             
             # ===== Step 6: Hiển thị sample data =====
-            logger.info("📊 Sample processed data:")
+            logger.info("Sample processed data:")
             df.show(5, truncate=False)
             
             # ===== Step 7: Lưu dữ liệu =====
@@ -420,19 +415,19 @@ class SparkDataCleaner:
             # ===== Optional: Lưu vào PostgreSQL =====
             # self.write_to_postgresql(df, "processed_jobs")
             
-            logger.info("✨ Spark processing pipeline hoàn thành!")
+            logger.info("Spark processing pipeline hoàn thành!")
             
         except Exception as e:
-            logger.error(f"❌ Lỗi trong pipeline: {e}")
+            logger.error(f"Lỗi trong pipeline: {e}")
             raise
     
     def stop(self):
         """Dừng Spark session"""
         try:
             self.spark.stop()
-            logger.info("✅ Spark session đã dừng")
+            logger.info("Spark session đã dừng")
         except Exception as e:
-            logger.error(f"❌ Lỗi dừng Spark session: {e}")
+            logger.error(f"Lỗi dừng Spark session: {e}")
 
 
 def main():
@@ -444,7 +439,7 @@ def main():
         cleaner.process_pipeline()
     
     except Exception as e:
-        logger.error(f"❌ Lỗi chung: {e}")
+        logger.error(f"Lỗi chung: {e}")
     
     finally:
         # ===== Dừng Spark =====

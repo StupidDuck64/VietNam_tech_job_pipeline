@@ -121,4 +121,3 @@ vn-it-job-analytics/
 *   Expand data sources to other job boards (TopDev, VietnamWorks).
 
 ---
-**Author**: Data Engineering Team

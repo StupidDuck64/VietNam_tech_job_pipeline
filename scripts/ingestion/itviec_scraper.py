@@ -67,7 +67,7 @@ class ITviecScraper:
     def _init_driver(self):
         """Khởi tạo Chrome WebDriver với headless mode"""
         try:
-            logger.info("🚗 Đang khởi tạo Chrome WebDriver...")
+            logger.info("Đang khởi tạo Chrome WebDriver...")
             
             chrome_options = Options()
             # chrome_options.add_argument('--headless')  # Tạm tắt headless để debug (nếu chạy local)
@@ -91,7 +91,7 @@ class ITviecScraper:
             chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
             chrome_options.add_experimental_option('useAutomationExtension', False)
             
-            # Khởi tạo driver (không dùng ChromeDriverManager vì có bug)
+            # Khởi tạo driver 
             # Chrome đã được cài trong container, dùng default chromedriver
             self.driver = webdriver.Chrome(options=chrome_options)
             
@@ -105,10 +105,10 @@ class ITviecScraper:
                 fix_hairline=True,
             )
             
-            logger.info("✅ Chrome WebDriver đã khởi tạo thành công (với Stealth)")
+            logger.info("Chrome WebDriver đã khởi tạo thành công (với Stealth)")
             
         except Exception as e:
-            logger.error(f"❌ Lỗi khởi tạo WebDriver: {e}")
+            logger.error(f"Lỗi khởi tạo WebDriver: {e}")
             raise
     
     def _close_driver(self):
@@ -116,9 +116,9 @@ class ITviecScraper:
         if self.driver:
             try:
                 self.driver.quit()
-                logger.info("✅ Đã đóng Chrome WebDriver")
+                logger.info("Đã đóng Chrome WebDriver")
             except Exception as e:
-                logger.warning(f"⚠️ Lỗi khi đóng driver: {e}")
+                logger.warning(f"Lỗi khi đóng driver: {e}")
     
     def connect_mongodb(self):
         """Kết nối tới MongoDB"""
@@ -128,16 +128,16 @@ class ITviecScraper:
             self.client.admin.command('ping')
             self.db = self.client[self.db_name]
             self.collection = self.db[self.collection_name]
-            logger.info(f"✅ Kết nối MongoDB thành công - Database: {self.db_name}")
+            logger.info(f"Kết nối MongoDB thành công - Database: {self.db_name}")
         except errors.ServerSelectionTimeoutError as e:
-            logger.error(f"❌ Không thể kết nối MongoDB: {e}")
+            logger.error(f"Không thể kết nối MongoDB: {e}")
             raise
     
     def disconnect_mongodb(self):
         """Ngắt kết nối MongoDB"""
         if self.client:
             self.client.close()
-            logger.info("✅ Ngắt kết nối MongoDB")
+            logger.info("Ngắt kết nối MongoDB")
     
     def fetch_page(self, url: str, max_retries: int = 3) -> str:
         """
@@ -154,10 +154,10 @@ class ITviecScraper:
             try:
                 if attempt > 0:
                     wait_time = (2 ** attempt) + random.uniform(1, 3)
-                    logger.info(f"⏳ Retry {attempt}/{max_retries} sau {wait_time:.1f}s...")
+                    logger.info(f"Retry {attempt}/{max_retries} sau {wait_time:.1f}s...")
                     time.sleep(wait_time)
                 
-                logger.info(f"🌐 Đang tải: {url}")
+                logger.info(f"Đang tải: {url}")
                 self.driver.get(url)
                 
                 # Đợi trang load (đợi job listings xuất hiện)
@@ -165,9 +165,9 @@ class ITviecScraper:
                     WebDriverWait(self.driver, 15).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, "div.job-content, div[class*='job'], h3"))
                     )
-                    logger.info("✅ Trang đã load xong")
+                    logger.info("Trang đã load xong")
                 except TimeoutException:
-                    logger.warning("⚠️ Timeout chờ elements, nhưng vẫn tiếp tục...")
+                    logger.warning("Timeout chờ elements, nhưng vẫn tiếp tục...")
                 
                 # Thêm delay ngẫu nhiên để giống người dùng thật
                 time.sleep(random.uniform(3, 5))
@@ -177,19 +177,19 @@ class ITviecScraper:
                 
                 # Kiểm tra xem có phải trang Cloudflare challenge không
                 if "Just a moment" in html or "Checking your browser" in html:
-                    logger.warning("⚠️ Gặp Cloudflare challenge, đợi...")
+                    logger.warning("Gặp Cloudflare challenge, đợi...")
                     time.sleep(10)  # Đợi Cloudflare solve
                     html = self.driver.page_source
                 
-                logger.info(f"✅ Lấy được {len(html)} bytes HTML")
+                logger.info(f"Lấy được {len(html)} bytes HTML")
                 return html
                 
             except WebDriverException as e:
-                logger.error(f"❌ Lỗi WebDriver (attempt {attempt + 1}/{max_retries}): {e}")
+                logger.error(f"Lỗi WebDriver (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt == max_retries - 1:
                     raise
             except Exception as e:
-                logger.error(f"❌ Lỗi fetch page (attempt {attempt + 1}/{max_retries}): {e}")
+                logger.error(f"Lỗi fetch page (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt == max_retries - 1:
                     raise
     
@@ -259,7 +259,7 @@ class ITviecScraper:
             }
 
         except Exception as e:
-            logger.error(f"❌ Lỗi parse job: {e}")
+            logger.error(f"Lỗi parse job: {e}")
             return None
 
             return None
@@ -294,36 +294,31 @@ class ITviecScraper:
             "aws", "azure", "google-cloud", "docker", "kubernetes"
         ]
         
-        # TEST MODE: Chỉ cào 1 keyword để test nhanh
-        # keywords = ["java"]
         
-        # Giới hạn số lượng keyword nếu cần
-        # Nếu max_pages được set nhỏ (ví dụ 5 từ DAG), ta sẽ bỏ qua nó để lấy hết danh sách keyword
-        # Hoặc chỉ dùng nó nếu muốn test nhanh
         target_keywords = keywords
-        if 0 < max_pages < 5: # Chỉ limit nếu max_pages rất nhỏ (chế độ test)
+        if 0 < max_pages < 5: 
              target_keywords = keywords[:max_pages]
         
-        logger.info(f"🚀 Sẽ cào dữ liệu với {len(target_keywords)} keywords: {target_keywords}")
+        logger.info(f"Sẽ cào dữ liệu với {len(target_keywords)} keywords: {target_keywords}")
         
         # Khởi tạo driver
         self._init_driver()
         
         try:
             for index, keyword in enumerate(target_keywords):
-                # Anti-bot: Reset driver hoàn toàn giữa các keyword để xóa sạch session/fingerprint
+               
                 if index > 0:
                     try:
-                        logger.info("🔄 Đang khởi động lại WebDriver để tránh bị block...")
+                        logger.info("Đang khởi động lại WebDriver để tránh bị block...")
                         self._close_driver()
                         
                         delay = random.uniform(20, 40)
-                        logger.info(f"😴 Nghỉ {delay:.1f}s trước khi tạo session mới...")
+                        logger.info(f"Nghỉ {delay:.1f}s trước khi tạo session mới...")
                         time.sleep(delay)
                         
                         self._init_driver()
                     except Exception as e:
-                        logger.error(f"❌ Lỗi khi restart driver: {e}")
+                        logger.error(f"Lỗi khi restart driver: {e}")
                         # Nếu lỗi restart, cố gắng init lại nếu chưa có
                         if not self.driver:
                             self._init_driver()
@@ -331,7 +326,7 @@ class ITviecScraper:
                 # Xây dựng URL theo keyword
                 url = f"https://itviec.com/it-jobs/{keyword}"
                 
-                logger.info(f"📄 [{index+1}/{len(target_keywords)}] Đang xử lý keyword: {keyword} -> {url}")
+                logger.info(f"[{index+1}/{len(target_keywords)}] Đang xử lý keyword: {keyword} -> {url}")
                 
                 try:
                     # Lấy HTML của trang
@@ -341,9 +336,9 @@ class ITviecScraper:
                     if "Verify you are human" in html or "Just a moment" in html:
                         # Nếu file lớn (>100KB), có thể là false positive?
                         if len(html) > 100000:
-                             logger.info(f"⚠️ Phát hiện từ khóa Cloudflare nhưng HTML lớn ({len(html)} bytes) -> False Positive. Tiếp tục parse...")
+                             logger.info(f"Phát hiện từ khóa Cloudflare nhưng HTML lớn ({len(html)} bytes) -> False Positive. Tiếp tục parse...")
                         else:
-                            logger.warning(f"⚠️ Cloudflare Challenge detected for {keyword}. Saving HTML for debug...")
+                            logger.warning(f"Cloudflare Challenge detected for {keyword}. Saving HTML for debug...")
                             try:
                                 with open(f"/tmp/debug_{keyword}_challenge.html", "w", encoding="utf-8") as f:
                                     f.write(html)
@@ -356,7 +351,7 @@ class ITviecScraper:
 
                     # Kiểm tra nếu bị block (HTML quá ngắn)
                     if len(html) < 30000:
-                        logger.warning(f"⚠️ HTML quá ngắn ({len(html)} bytes), có thể bị block. Đợi 30s và thử lại...")
+                        logger.warning(f"HTML quá ngắn ({len(html)} bytes), có thể bị block. Đợi 30s và thử lại...")
                         time.sleep(30)
                         html = self.fetch_page(url) # Retry 1 lần
                     
@@ -383,7 +378,7 @@ class ITviecScraper:
                     if len(job_cards) > 40:
                         job_cards = job_cards[:40]
                     
-                    logger.info(f"📦 Keyword '{keyword}': Tìm thấy {len(job_cards)} thẻ jobs tiềm năng")
+                    logger.info(f"Keyword '{keyword}': Tìm thấy {len(job_cards)} thẻ jobs tiềm năng")
                     
                     # Parse jobs
                     current_page_jobs = []
@@ -399,19 +394,19 @@ class ITviecScraper:
                     new_jobs = [job for job in current_page_jobs if job['url'] not in seen_urls]
                     
                     all_jobs.extend(new_jobs)
-                    logger.info(f"✅ Keyword '{keyword}': Thêm {len(new_jobs)} jobs mới (Tổng: {len(all_jobs)})")
+                    logger.info(f"Keyword '{keyword}': Thêm {len(new_jobs)} jobs mới (Tổng: {len(all_jobs)})")
                     
                     # Delay giữa các keyword
                     if index < len(target_keywords) - 1:
                         delay = random.uniform(5, 8)
-                        logger.info(f"😴 Nghỉ {delay:.1f}s trước keyword tiếp theo...")
+                        logger.info(f"Nghỉ {delay:.1f}s trước keyword tiếp theo...")
                         time.sleep(delay)
                         
                 except Exception as e:
-                    logger.error(f"❌ Lỗi khi xử lý keyword '{keyword}': {e}")
+                    logger.error(f"Lỗi khi xử lý keyword '{keyword}': {e}")
                     continue
             
-            logger.info(f"✅ Tổng cộng cào được {len(all_jobs)} jobs từ {len(target_keywords)} keywords")
+            logger.info(f"Tổng cộng cào được {len(all_jobs)} jobs từ {len(target_keywords)} keywords")
             return all_jobs
             
         finally:
@@ -429,21 +424,21 @@ class ITviecScraper:
             True nếu thành công, False nếu thất bại
         """
         if not jobs:
-            logger.warning("⚠️ Không có dữ liệu để lưu")
+            logger.warning("Không có dữ liệu để lưu")
             return False
         
         try:
             # Xóa dữ liệu cũ (optional - có thể comment out nếu muốn append)
             # self.collection.delete_many({})
-            # logger.info("🗑️ Đã xóa dữ liệu cũ")
+            # logger.info("Đã xóa dữ liệu cũ")
             
             # Insert mới
             result = self.collection.insert_many(jobs)
-            logger.info(f"✅ Đã lưu {len(result.inserted_ids)} jobs vào MongoDB")
+            logger.info(f"Đã lưu {len(result.inserted_ids)} jobs vào MongoDB")
             return True
             
         except Exception as e:
-            logger.error(f"❌ Lỗi khi lưu vào MongoDB: {e}")
+            logger.error(f"Lỗi khi lưu vào MongoDB: {e}")
             return False
     
     def get_statistics(self) -> dict:
@@ -469,11 +464,11 @@ class ITviecScraper:
                 'last_scraped': datetime.utcnow().isoformat()
             }
             
-            logger.info(f"📊 Thống kê: {json.dumps(stats, indent=2, ensure_ascii=False)}")
+            logger.info(f"Thống kê: {json.dumps(stats, indent=2, ensure_ascii=False)}")
             return stats
             
         except Exception as e:
-            logger.error(f"❌ Lỗi khi lấy thống kê: {e}")
+            logger.error(f"Lỗi khi lấy thống kê: {e}")
             return {}
 
 
@@ -493,7 +488,7 @@ if __name__ == "__main__":
         scraper.connect_mongodb()
         
         # Cào dữ liệu
-        logger.info(f"🚀 Bắt đầu cào từ: {TARGET_URL}")
+        logger.info(f"Bắt đầu cào từ: {TARGET_URL}")
         jobs = scraper.scrape_jobs(TARGET_URL, max_pages=3)
         
         # Lưu vào MongoDB
@@ -502,10 +497,10 @@ if __name__ == "__main__":
         # Lấy thống kê
         stats = scraper.get_statistics()
         
-        logger.info("🎉 Hoàn thành!")
+        logger.info("Hoàn thành!")
         
     except Exception as e:
-        logger.error(f"❌ Lỗi: {e}")
+        logger.error(f"Lỗi: {e}")
         
     finally:
         # Ngắt kết nối

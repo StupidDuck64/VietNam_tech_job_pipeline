@@ -1,5 +1,4 @@
-# ===== Dockerfile cho Airflow =====
-# Image này sẽ chạy cả Airflow Webserver lẫn Scheduler (Customized)
+)
 
 FROM apache/airflow:2.7.3-python3.11
 
