@@ -77,7 +77,7 @@ The system follows a modern ETL architecture orchestrated by Apache Airflow:
 ### 🖥️ Step 4: Access Interfaces
 *   **Airflow UI**: [http://localhost:8080](http://localhost:8080)
     *   **Username**: `airflow`
-    *   **Password**: `airflow`
+    *   **Password**: `hehehehe`
 *   **Spark Master UI**: [http://localhost:8888](http://localhost:8888)
 *   **Spark Worker UI**: [http://localhost:8081](http://localhost:8081)
 
