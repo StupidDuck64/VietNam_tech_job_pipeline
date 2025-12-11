@@ -1,8 +1,3 @@
-"""
-Script xóa dữ liệu trong MongoDB (Dùng cẩn thận)
-Author: Data Engineering Team
-"""
-
 import os
 from pymongo import MongoClient
 

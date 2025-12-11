@@ -1,7 +1,3 @@
-# ===== Docker Compose Config cho toàn bộ Infrastructure =====
-# Bao gồm: PostgreSQL, MongoDB, Airflow, và Spark (optional)
-# Compatible with Docker Compose v2.x (version declaration not required)
-
 services:
   # ===== PostgreSQL (Metadata Store + Data Warehouse) =====
   postgres:

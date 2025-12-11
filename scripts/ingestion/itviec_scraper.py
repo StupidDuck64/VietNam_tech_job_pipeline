@@ -1,13 +1,3 @@
-"""
-===== ITviec Job Scraper với Selenium =====
-Script cào dữ liệu việc làm từ ITviec.com
-Sử dụng: Selenium + Chrome headless + BeautifulSoup
-Lưu vào: MongoDB
-
-Author: Data Engineering Team  
-Date: December 2025 (Updated)
-"""
-
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options

@@ -1,8 +1,3 @@
--- ===== VN IT Job Analytics - Sample Queries =====
--- Các câu query mẫu cho phân tích dữ liệu
--- Author: Data Engineering Team
--- Date: December 2025 (Updated)
-
 -- ===== 1. TOP SKILLS IN THE MARKET =====
 -- Kỹ năng nào được tìm kiếm nhiều nhất hiện nay?
 SELECT 

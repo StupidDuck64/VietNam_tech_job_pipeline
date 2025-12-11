@@ -1,14 +1,3 @@
-"""
-===== Spark Data Cleaner & Skill Extractor =====
-Script xử lý dữ liệu từ MongoDB bằng PySpark
-- Làm sạch dữ liệu (xóa HTML tags, emoji, chuẩn hóa lương)
-- Trích xuất kỹ năng (Skills) từ Job Description
-- Lưu dữ liệu đã xử lý vào Parquet hoặc PostgreSQL
-
-Author: Data Engineering Team
-Date: December 2025 (Updated)
-"""
-
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
     col, when, regexp_replace, lower, trim, split, explode, 

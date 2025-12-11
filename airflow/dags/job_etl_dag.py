@@ -1,15 +1,3 @@
-"""
-===== Airflow DAG - ITviec Job ETL Pipeline =====
-Điều phối toàn bộ quy trình ETL:
-1. Scrape dữ liệu từ ITviec.com
-2. Xử lý dữ liệu với Spark
-3. Load vào Data Warehouse (PostgreSQL)
-
-Lịch chạy: Hàng ngày lúc 8:00 AM
-Author: Data Engineering Team
-Date: December 2025 (Updated)
-"""
-
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
