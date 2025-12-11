@@ -32,7 +32,7 @@ POSTGRES_USER = os.getenv('POSTGRES_USER', 'airflow_user')
 POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', 'airflow_password')
 POSTGRES_DB = os.getenv('POSTGRES_DB', 'airflow_db')
 
-# ===== Danh sách kỹ năng IT phổ biến =====
+# ===== List of popular IT skills =====
 SKILLS_LIST = [
     'Python', 'Java', 'JavaScript', 'TypeScript', 'SQL', 'NoSQL', 'MongoDB', 'PostgreSQL',
     'MySQL', 'Spark', 'Hadoop', 'Hive', 'Airflow', 'Docker', 'Kubernetes', 'AWS',
@@ -47,7 +47,7 @@ SKILLS_LIST = [
 
 class SparkDataCleaner:
     """
-    Class xử lý dữ liệu với Spark
+    Class to process data with Spark
     
     Attributes:
         spark: SparkSession object
@@ -55,10 +55,10 @@ class SparkDataCleaner:
     
     def __init__(self, app_name: str = "ITviec-Data-Processor"):
         """
-        Khởi tạo Spark session
+        Initialize Spark session
         
         Args:
-            app_name: Tên của Spark application
+            app_name: Name of Spark application
         """
         try:
             # Set JAVA_HOME explicitly if needed (though it should be in env)
@@ -66,7 +66,7 @@ class SparkDataCleaner:
             
             # Debug info
             import sys
-            # Log thông tin môi trường
+            # Log environment info
             logger.info(f"Python Executable: {sys.executable}")
             logger.info(f"JAVA_HOME: {os.environ.get('JAVA_HOME')}")
             
@@ -87,18 +87,18 @@ class SparkDataCleaner:
                 .config("spark.driver.bindAddress", "0.0.0.0") \
                 .getOrCreate()
             
-            logger.info("Spark session tạo thành công")
+            logger.info("Spark session created successfully")
         except Exception as e:
-            logger.error(f"Lỗi tạo Spark session: {e}")
+            logger.error(f"Error creating Spark session: {e}")
             raise
     
     def read_from_mongodb(self, collection_name: str = "raw_jobs"):
         """
-        Đọc dữ liệu từ MongoDB
+        Read data from MongoDB
         
         Args:
-            collection_name: Tên collection trong MongoDB
-            
+            collection_name: Collection name in MongoDB
+        
         Returns:
             Spark DataFrame
         """
@@ -108,10 +108,10 @@ class SparkDataCleaner:
                 .option("uri", f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}.{collection_name}?authSource=admin") \
                 .load()
             
-            # Kiểm tra nếu DataFrame rỗng
+            # Check if DataFrame is empty
             if df.rdd.isEmpty():
-                logger.warning(f"MongoDB collection {collection_name} trống. Trả về DataFrame rỗng.")
-                # Tạo schema rỗng để tránh lỗi các bước sau
+                logger.warning(f"MongoDB collection {collection_name} is empty. Returning empty DataFrame.")
+                # Create empty schema to avoid errors in later steps
                 schema = StructType([
                     StructField("title", StringType(), True),
                     StructField("company", StringType(), True),
@@ -123,12 +123,12 @@ class SparkDataCleaner:
                 ])
                 return self.spark.createDataFrame([], schema)
 
-            logger.info(f"Đọc {df.count()} records từ MongoDB collection: {collection_name}")
+            logger.info(f"Read {df.count()} records from MongoDB collection: {collection_name}")
             return df
         
         except Exception as e:
-            logger.error(f"Lỗi đọc từ MongoDB: {e}")
-            # Trả về empty DF thay vì raise để pipeline không crash nếu DB chưa có data
+            logger.error(f"Error reading from MongoDB: {e}")
+            # Return empty DF instead of raise so pipeline doesn't crash if DB has no data
             schema = StructType([
                 StructField("title", StringType(), True),
                 StructField("company", StringType(), True),
@@ -138,23 +138,21 @@ class SparkDataCleaner:
                 StructField("url", StringType(), True),
                 StructField("scraped_at", StringType(), True)
             ])
-            return self.spark.createDataFrame([], schema)
-    
-    def clean_text(self, df, column_name: str) -> object:
+            return self.spark.createDataFrame([], schema)    def clean_text(self, df, column_name: str) -> object:
         """
-        Làm sạch text: xóa HTML tags, emoji, whitespace thừa
+        Clean text: remove HTML tags, emoji, extra whitespace
         
         Args:
             df: Spark DataFrame
-            column_name: Tên cột cần làm sạch
+            column_name: Column name to clean
             
         Returns:
-            DataFrame với cột đã làm sạch
+            DataFrame with cleaned column
         """
         try:
             df = df.withColumn(
                 column_name,
-                # ===== Xóa HTML tags =====
+                # ===== Remove HTML tags =====
                 regexp_replace(col(column_name), r'<[^>]+>', '')
             )
             
@@ -162,7 +160,7 @@ class SparkDataCleaner:
             
             df = df.withColumn(
                 column_name,
-                # ===== Xóa whitespace thừa =====
+                # ===== Remove extra whitespace =====
                 regexp_replace(col(column_name), r'\s+', ' ')
             )
             
@@ -178,31 +176,31 @@ class SparkDataCleaner:
                 lower(col(column_name))
             )
             
-            logger.info(f"Làm sạch cột: {column_name}")
+            logger.info(f"Cleaned column: {column_name}")
             return df
         
         except Exception as e:
-            logger.error(f"Lỗi làm sạch text: {e}")
+            logger.error(f"Error cleaning text: {e}")
             return df
     
     def normalize_salary(self, df) -> object:
         """
-        Chuẩn hóa cột lương
-        - Parse lương từ string (e.g., "$1000 - $2000") thành min/max
+        Normalize salary column
+        - Parse salary from string (e.g., "$1000 - $2000") to min/max
         
         Args:
             df: Spark DataFrame
             
         Returns:
-            DataFrame với cột salary_min, salary_max
+            DataFrame with salary_min, salary_max columns
         """
         try:
-            # ===== Khởi tạo cột mới =====
+            # ===== Initialize new columns =====
             df = df.withColumn('salary_min', lit(None).cast(IntegerType())) \
                    .withColumn('salary_max', lit(None).cast(IntegerType()))
             
-            # ===== Parse lương từ string =====
-            # Ví dụ: "$1000 - $2000" -> 1000, 2000
+            # ===== Parse salary from string =====
+            # Example: "$1000 - $2000" -> 1000, 2000
             df = df.withColumn(
                 'salary_min',
                 when(col('salary').contains('$'),
@@ -217,33 +215,33 @@ class SparkDataCleaner:
                 ).otherwise(col('salary_min'))
             )
             
-            # ===== Xóa cột salary cũ =====
+            # ===== Drop old salary column =====
             df = df.drop('salary')
             
-            logger.info("Chuẩn hóa cột lương")
+            logger.info("Normalized salary column")
             return df
         
         except Exception as e:
-            logger.error(f"Lỗi chuẩn hóa lương: {e}")
+            logger.error(f"Error normalizing salary: {e}")
             return df
     
     def extract_skills(self, df, description_column: str = "description_preview") -> object:
         """
-        Trích xuất kỹ năng từ Job Description
+        Extract skills from Job Description
         
         Args:
             df: Spark DataFrame
-            description_column: Tên cột chứa job description
+            description_column: Column name containing job description
             
         Returns:
-            DataFrame với cột 'skills' chứa list các skills
+            DataFrame with 'skills' column containing list of skills
         """
         try:
-            # ===== Tạo regex pattern từ danh sách skills =====
-            # Join skills với | (OR operator)
+            # ===== Create regex pattern from skills list =====
+            # Join skills with | (OR operator)
             skills_pattern = '|'.join(SKILLS_LIST)
             
-            # ===== Trích xuất skills từ description =====
+            # ===== Extract skills from description =====
             df = df.withColumn(
                 'skills',
                 explode(
@@ -257,30 +255,30 @@ class SparkDataCleaner:
                 )
             )
             
-            logger.info("Trích xuất kỹ năng từ Job Description")
+            logger.info("Extracted skills from Job Description")
             return df
         
         except Exception as e:
-            logger.error(f"Lỗi trích xuất skills: {e}")
+            logger.error(f"Error extracting skills: {e}")
             return df
     
     def deduplicate_skills(self, df) -> object:
         """
-        Loại bỏ skills trùng lặp và thêm skill count
+        Remove duplicate skills and add skill count
         
         Args:
             df: Spark DataFrame
             
         Returns:
-            DataFrame với skills đã dedup
+            DataFrame with deduplicated skills
         """
         try:
-            # ===== Group by job và collect unique skills =====
+            # ===== Group by job and collect unique skills =====
             df_agg = df.groupBy('job_id', 'job_title', 'company_name').agg(
                 collect_list('skills').alias('skills_list')
             )
             
-            # ===== Loại bỏ duplicate trong list =====
+            # ===== Remove duplicates in list =====
             df_agg = df_agg.withColumn(
                 'skills',
                 when(
@@ -291,72 +289,72 @@ class SparkDataCleaner:
             
             df_agg = df_agg.drop('skills_list')
             
-            logger.info("Loại bỏ skills trùng lặp")
+            logger.info("Removed duplicate skills")
             return df_agg
         
         except Exception as e:
-            logger.error(f"Lỗi dedup skills: {e}")
+            logger.error(f"Error deduplicating skills: {e}")
             return df
     
     def add_metadata(self, df) -> object:
         """
-        Thêm metadata như processed_at, row_id, etc
+        Add metadata like processed_at, row_id, etc
         
         Args:
             df: Spark DataFrame
             
         Returns:
-            DataFrame với metadata
+            DataFrame with metadata
         """
         try:
             df = df.withColumn('processed_at', lit(datetime.now().isoformat())) \
                    .withColumn('data_quality_score', lit(1.0))  # Placeholder
             
-            logger.info("Thêm metadata vào DataFrame")
+            logger.info("Added metadata to DataFrame")
             return df
         
         except Exception as e:
-            logger.error(f"Lỗi thêm metadata: {e}")
+            logger.error(f"Error adding metadata: {e}")
             return df
     
     def write_to_parquet(self, df, output_path: str):
         """
-        Lưu DataFrame vào Parquet format
+        Save DataFrame to Parquet format
         
         Args:
             df: Spark DataFrame
-            output_path: Đường dẫn output folder
+            output_path: Output folder path
         """
         try:
             df.write.mode("overwrite").parquet(output_path)
-            logger.info(f"Lưu dữ liệu vào Parquet: {output_path}")
+            logger.info(f"Saved data to Parquet: {output_path}")
         except Exception as e:
-            logger.error(f"Lỗi lưu Parquet: {e}")
+            logger.error(f"Error saving Parquet: {e}")
 
     def write_to_mongodb(self, df, collection_name: str = "processed_jobs"):
         """
-        Lưu DataFrame vào MongoDB
+        Save DataFrame to MongoDB
         
         Args:
             df: Spark DataFrame
-            collection_name: Tên collection trong MongoDB
+            collection_name: Collection name in MongoDB
         """
         try:
             df.write.format("mongo") \
                 .mode("append") \
                 .option("uri", f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}.{collection_name}?authSource=admin") \
                 .save()
-            logger.info(f"Lưu dữ liệu vào MongoDB collection: {collection_name}")
+            logger.info(f"Saved data to MongoDB collection: {collection_name}")
         except Exception as e:
-            logger.error(f"Lỗi lưu MongoDB: {e}")
+            logger.error(f"Error saving MongoDB: {e}")
     
     def write_to_postgresql(self, df, table_name: str):
         """
-        Lưu DataFrame vào PostgreSQL
+        Save DataFrame to PostgreSQL
         
         Args:
             df: Spark DataFrame
-            table_name: Tên table trong PostgreSQL
+            table_name: Table name in PostgreSQL
         """
         try:
             jdbc_url = f"jdbc:postgresql://{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
@@ -371,63 +369,63 @@ class SparkDataCleaner:
                 .mode("append") \
                 .save()
             
-            logger.info(f"Lưu dữ liệu vào PostgreSQL table: {table_name}")
+            logger.info(f"Saved data to PostgreSQL table: {table_name}")
         
         except Exception as e:
-            logger.error(f"Lỗi lưu PostgreSQL: {e}")
+            logger.error(f"Error saving PostgreSQL: {e}")
     
     def process_pipeline(self):
         """
-        Chạy toàn bộ processing pipeline
+        Run entire processing pipeline
         """
         try:
-            logger.info("Bắt đầu Spark processing pipeline")
+            logger.info("Start Spark processing pipeline")
             
-            # ===== Step 1: Đọc dữ liệu từ MongoDB =====
+            # ===== Step 1: Read data from MongoDB =====
             df = self.read_from_mongodb("raw_jobs")
             
-            # ===== Step 2: Làm sạch text =====
+            # ===== Step 2: Clean text =====
             # Note: Column names must match MongoDB fields
             df = self.clean_text(df, "title")
-            # df = self.clean_text(df, "description_preview") # Field này không có trong schema fallback
+            # df = self.clean_text(df, "description_preview") # This field is not in fallback schema
             df = self.clean_text(df, "company")
             
-            # ===== Step 3: Chuẩn hóa lương =====
+            # ===== Step 3: Normalize salary =====
             df = self.normalize_salary(df)
             
-            # ===== Step 4: Trích xuất skills =====
-            # df = self.extract_skills(df, "description_preview") # Tạm disable vì thiếu field
+            # ===== Step 4: Extract skills =====
+            # df = self.extract_skills(df, "description_preview") # Temporarily disabled due to missing field
             
-            # ===== Step 5: Thêm metadata =====
+            # ===== Step 5: Add metadata =====
             df = self.add_metadata(df)
             
-            # ===== Step 6: Hiển thị sample data =====
+            # ===== Step 6: Show sample data =====
             logger.info("Sample processed data:")
             df.show(5, truncate=False)
             
-            # ===== Step 7: Lưu dữ liệu =====
+            # ===== Step 7: Save data =====
             output_parquet = "data/processed/jobs_processed"
             self.write_to_parquet(df, output_parquet)
             
-            # ===== Step 8: Lưu vào MongoDB =====
+            # ===== Step 8: Save to MongoDB =====
             self.write_to_mongodb(df, "processed_jobs")
             
-            # ===== Optional: Lưu vào PostgreSQL =====
+            # ===== Optional: Save to PostgreSQL =====
             # self.write_to_postgresql(df, "processed_jobs")
             
-            logger.info("Spark processing pipeline hoàn thành!")
+            logger.info("Spark processing pipeline completed!")
             
         except Exception as e:
-            logger.error(f"Lỗi trong pipeline: {e}")
+            logger.error(f"Error in pipeline: {e}")
             raise
     
     def stop(self):
-        """Dừng Spark session"""
+        """Stop Spark session"""
         try:
             self.spark.stop()
-            logger.info("Spark session đã dừng")
+            logger.info("Spark session stopped")
         except Exception as e:
-            logger.error(f"Lỗi dừng Spark session: {e}")
+            logger.error(f"Error stopping Spark session: {e}")
 
 
 def main():
@@ -435,14 +433,14 @@ def main():
     cleaner = SparkDataCleaner()
     
     try:
-        # ===== Chạy pipeline =====
+        # ===== Run pipeline =====
         cleaner.process_pipeline()
     
     except Exception as e:
-        logger.error(f"Lỗi chung: {e}")
+        logger.error(f"General error: {e}")
     
     finally:
-        # ===== Dừng Spark =====
+        # ===== Stop Spark =====
         cleaner.stop()
 
 

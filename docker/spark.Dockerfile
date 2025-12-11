@@ -1,11 +1,11 @@
-# ===== Dockerfile cho Spark =====
-# Image này sẽ chạy Spark Master và Worker (Customized)
+# ===== Dockerfile for Spark =====
+# This image will run Spark Master and Worker (Customized)
 
 FROM apache/spark:3.5.0-python3
 
 USER root
 
-# ===== Cài đặt Python packages cho Spark =====
+# ===== Install Python packages for Spark =====
 RUN pip install --no-cache-dir \
     pymongo \
     psycopg2-binary \
@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir \
     beautifulsoup4 \
     lxml
 
-# ===== Tạo directory cho scripts và data =====
+# ===== Create directory for scripts and data =====
 RUN mkdir -p /opt/spark/scripts /opt/spark/data
 WORKDIR /opt/spark/work-dir
 

@@ -1,5 +1,5 @@
 -- ===== 1. TOP SKILLS IN THE MARKET =====
--- Kỹ năng nào được tìm kiếm nhiều nhất hiện nay?
+-- Which skills are most in demand?
 SELECT 
     ds.skill_name,
     COUNT(bjs.skill_id) as job_count,
@@ -11,7 +11,7 @@ ORDER BY job_count DESC
 LIMIT 20;
 
 -- ===== 2. SALARY ANALYSIS BY LOCATION =====
--- Mức lương trung bình theo địa điểm?
+-- Average salary by location?
 SELECT 
     location,
     COUNT(*) as total_jobs,
@@ -26,7 +26,7 @@ GROUP BY location
 ORDER BY avg_midpoint DESC;
 
 -- ===== 3. COMPANY WITH MOST JOB POSTINGS =====
--- Công ty nào đang tuyển dụng nhiều nhất?
+-- Which company is hiring the most?
 SELECT 
     dc.company_name,
     COUNT(fj.job_id) as job_count,
@@ -39,7 +39,7 @@ ORDER BY job_count DESC
 LIMIT 15;
 
 -- ===== 4. SKILL COMBINATION ANALYSIS =====
--- Những kỹ năng thường được yêu cầu cùng nhau?
+-- Which skills are often required together?
 SELECT 
     ds1.skill_name as skill_1,
     ds2.skill_name as skill_2,
@@ -53,7 +53,7 @@ ORDER BY co_occurrence_count DESC
 LIMIT 20;
 
 -- ===== 5. JOB TITLE DISTRIBUTION =====
--- Vị trí việc làm nào có nhiều job postings?
+-- Which job titles have the most postings?
 SELECT 
     job_title,
     COUNT(*) as job_count,
@@ -65,7 +65,7 @@ ORDER BY job_count DESC
 LIMIT 20;
 
 -- ===== 6. LOCATION POPULARITY =====
--- Địa điểm nào có lượng job nhiều nhất?
+-- Which location has the most jobs?
 SELECT 
     location,
     COUNT(*) as job_count,
@@ -78,7 +78,7 @@ ORDER BY job_count DESC
 LIMIT 15;
 
 -- ===== 7. SALARY RANGE DISTRIBUTION =====
--- Phân bố range lương như thế nào?
+-- How is salary range distributed?
 SELECT 
     CASE 
         WHEN salary_max IS NULL THEN 'Not disclosed'
@@ -96,7 +96,7 @@ GROUP BY salary_range
 ORDER BY job_count DESC;
 
 -- ===== 8. DATA QUALITY REPORT =====
--- Chất lượng dữ liệu như thế nào?
+-- How is data quality?
 SELECT 
     'Total Jobs' as metric,
     COUNT(*)::TEXT as value

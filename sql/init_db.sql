@@ -1,4 +1,4 @@
--- ===== 1. DIMENSION TABLE - Công ty =====
+-- ===== 1. DIMENSION TABLE - Company =====
 CREATE TABLE IF NOT EXISTS dim_companies (
     company_id SERIAL PRIMARY KEY,
     company_name VARCHAR(255) NOT NULL UNIQUE,
@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS dim_companies (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ===== 2. FACT TABLE - Bảng chứa dữ liệu chính về jobs =====
+-- ===== 2. FACT TABLE - Main table for job data =====
 CREATE TABLE IF NOT EXISTS fact_jobs (
     job_id SERIAL PRIMARY KEY,
     company_id INT NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS fact_jobs (
     FOREIGN KEY (company_id) REFERENCES dim_companies(company_id)
 );
 
--- ===== 3. DIMENSION TABLE - Kỹ năng =====
+-- ===== 3. DIMENSION TABLE - Skills =====
 CREATE TABLE IF NOT EXISTS dim_skills (
     skill_id SERIAL PRIMARY KEY,
     skill_name VARCHAR(100) NOT NULL UNIQUE,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS dim_skills (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ===== 4. BRIDGE TABLE - Mối quan hệ Job-Skill (Many-to-Many) =====
+-- ===== 4. BRIDGE TABLE - Job-Skill Relationship (Many-to-Many) =====
 CREATE TABLE IF NOT EXISTS bridge_job_skills (
     job_skill_id SERIAL PRIMARY KEY,
     job_id INT NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS bridge_job_skills (
     UNIQUE(job_id, skill_id)
 );
 
--- ===== 5. DIMENSION TABLE - Vị trí =====
+-- ===== 5. DIMENSION TABLE - Location =====
 CREATE TABLE IF NOT EXISTS dim_locations (
     location_id SERIAL PRIMARY KEY,
     location_name VARCHAR(100) NOT NULL UNIQUE,
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS dim_locations (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ===== 6. STAGING TABLE - Dữ liệu raw chưa xử lý =====
+-- ===== 6. STAGING TABLE - Raw unprocessed data =====
 CREATE TABLE IF NOT EXISTS staging_raw_jobs (
     staging_id SERIAL PRIMARY KEY,
     job_title VARCHAR(255),
@@ -63,8 +63,8 @@ CREATE TABLE IF NOT EXISTS staging_raw_jobs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ===== CREATE INDEXES - Tối ưu query performance =====
--- Sử dụng IF NOT EXISTS để tránh lỗi khi chạy lại
+-- ===== CREATE INDEXES - Optimize query performance =====
+-- Use IF NOT EXISTS to avoid errors when re-running
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_fact_jobs_company_id') THEN
@@ -92,9 +92,9 @@ BEGIN
     END IF;
 END $$;
 
--- ===== VIEWS - Cho phục vụ báo cáo =====
+-- ===== VIEWS - For reporting =====
 
--- View 1: Top Skills theo tần suất
+-- View 1: Top Skills by frequency
 CREATE OR REPLACE VIEW v_top_skills AS
 SELECT 
     ds.skill_name,

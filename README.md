@@ -18,7 +18,6 @@ The system follows a modern ETL architecture orchestrated by Apache Airflow:
 3.  **Storage Layer**: Processed data is stored in **PostgreSQL** (Data Warehouse) for structured querying and **Parquet** files for historical archiving.
 4.  **Orchestration**: **Apache Airflow** schedules and monitors the entire workflow daily.
 
-For detailed architecture design, please refer to [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## ✨ Key Features
 

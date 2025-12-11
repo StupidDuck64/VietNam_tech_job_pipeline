@@ -29,7 +29,7 @@ MONGO_USERNAME = os.getenv('MONGO_INITDB_ROOT_USERNAME', 'admin')
 MONGO_PASSWORD = os.getenv('MONGO_INITDB_ROOT_PASSWORD', 'mongodb_password')
 MONGO_DB = os.getenv('MONGO_DB', 'job_db')
 TARGET_URL = os.getenv('TARGET_URL', 'https://itviec.com/it-jobs')
-# Tăng giới hạn mặc định lên 50 để cào hết danh sách keywords
+# Increase default limit to 50 to scrape all keywords
 MAX_PAGES = int(os.getenv('MAX_PAGES', '50'))
 
 # ===== Default DAG arguments =====
@@ -48,8 +48,8 @@ default_args = {
 dag = DAG(
     'job_etl_dag',
     default_args=default_args,
-    description='End-to-End ETL Pipeline cho ITviec Job Analytics',
-    schedule_interval='0 8 * * *',  # Chạy lúc 8:00 AM hàng ngày
+    description='End-to-End ETL Pipeline for ITviec Job Analytics',
+    schedule_interval='0 8 * * *',  # Run at 8:00 AM daily
     catchup=False,
     tags=['etl', 'scraping', 'data-processing'],
 )
@@ -58,49 +58,49 @@ dag = DAG(
 # ===== Task 1: Scrape Jobs from ITviec =====
 def scrape_jobs_task(**context):
     """
-    Task cào dữ liệu từ ITviec.com
-    Lưu dữ liệu raw vào MongoDB
+    Task to scrape data from ITviec.com
+    Save raw data to MongoDB
     """
-    logger.info("Bắt đầu scrape jobs từ ITviec.com")
+    logger.info("Start scraping jobs from ITviec.com")
     
     try:
-        # ===== Tạo MongoDB URI =====
+        # ===== Create MongoDB URI =====
         mongo_uri = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/"
         
-        # ===== Khởi tạo scraper =====
+        # ===== Initialize scraper =====
         scraper = ITviecScraper(
             mongo_uri=mongo_uri,
             db_name=MONGO_DB
         )
         
-        # ===== Kết nối MongoDB =====
+        # ===== Connect to MongoDB =====
         scraper.connect_mongodb()
         
-        # ===== Cào dữ liệu (cào nhiều trang) =====
-        logger.info(f"Cào TẤT CẢ IT Jobs từ URL: {TARGET_URL} (max {MAX_PAGES} trang)")
+        # ===== Scrape data (scrape multiple pages) =====
+        logger.info(f"Scrape ALL IT Jobs from URL: {TARGET_URL} (max {MAX_PAGES} pages)")
         jobs = scraper.scrape_jobs(TARGET_URL, max_pages=MAX_PAGES)
         
-        # ===== Lưu vào MongoDB =====
+        # ===== Save to MongoDB =====
         success = scraper.save_to_mongodb(jobs)
         
-        # ===== Lấy thống kê =====
+        # ===== Get statistics =====
         stats = scraper.get_statistics()
         
-        # ===== Push stats vào XCom (để dùng trong task sau) =====
+        # ===== Push stats to XCom (to use in next task) =====
         context['task_instance'].xcom_push(
             key='scrape_stats',
             value=stats
         )
         
-        logger.info(f"Scrape hoàn thành. Stats: {stats}")
+        logger.info(f"Scrape completed. Stats: {stats}")
         
-        # ===== Ngắt kết nối =====
+        # ===== Disconnect =====
         scraper.disconnect_mongodb()
         
         return success
     
     except Exception as e:
-        logger.error(f"Lỗi scrape: {e}")
+        logger.error(f"Scrape error: {e}")
         raise
 
 
@@ -121,32 +121,32 @@ task_scrape = PythonOperator(
 # ===== Task 2: Process Data with Spark =====
 def process_data_task(**context):
     """
-    Task xử lý dữ liệu với Spark
-    - Làm sạch dữ liệu
-    - Trích xuất kỹ năng
-    - Lưu vào Parquet
+    Task to process data with Spark
+    - Clean data
+    - Extract skills
+    - Save to Parquet
     """
-    logger.info("Bắt đầu Spark processing")
+    logger.info("Start Spark processing")
     
     try:
-        # ===== Khởi tạo Spark cleaner =====
+        # ===== Initialize Spark cleaner =====
         cleaner = SparkDataCleaner(app_name="ITviec-ETL-Processing")
         
         cleaner.process_pipeline()
         
-        logger.info("Spark processing hoàn thành")
+        logger.info("Spark processing completed")
         
         cleaner.stop()
         
         return True
     
     except Exception as e:
-        logger.error(f"Lỗi Spark processing: {e}")
+        logger.error(f"Spark processing error: {e}")
         raise
 
 
 def process_data_wrapper(**context):
-    """Wrapper function để gọi process_data_task"""
+    """Wrapper function to call process_data_task"""
     return process_data_task(**context)
 
 
@@ -162,15 +162,15 @@ task_process = PythonOperator(
 # ===== Task 3: Validate Data Quality =====
 def validate_data_quality(**context):
     """
-    Task kiểm tra chất lượng dữ liệu
-    - Số lượng records
+    Task to validate data quality
+    - Number of records
     - Missing data
     - Outliers
     """
-    logger.info("Bắt đầu validation chất lượng dữ liệu")
+    logger.info("Start data quality validation")
     
     try:
-        # ===== Lấy scrape stats từ XCom =====
+        # ===== Get scrape stats from XCom =====
         scrape_stats = context['task_instance'].xcom_pull(
             task_ids='scrape_jobs',
             key='scrape_stats'
@@ -178,16 +178,16 @@ def validate_data_quality(**context):
         
         logger.info(f"Scrape stats: {scrape_stats}")
         
-        # ===== Kiểm tra basic validation =====
+        # ===== Check basic validation =====
         if scrape_stats and scrape_stats.get('total_jobs', 0) > 0:
-            logger.info("Validation passed - Có dữ liệu để xử lý")
+            logger.info("Validation passed - Data available for processing")
             return True
         else:
-            logger.warning("Validation warning - Ít dữ liệu hoặc không có dữ liệu")
+            logger.warning("Validation warning - Little or no data")
             return False
     
     except Exception as e:
-        logger.error(f"Lỗi validation: {e}")
+        logger.error(f"Validation error: {e}")
         raise
 
 
@@ -215,18 +215,18 @@ task_setup_db = PostgresOperator(
 # ===== Task 5: Load to Data Warehouse =====
 def load_to_warehouse(**context):
     """
-    Task load dữ liệu từ Parquet vào PostgreSQL
-    (Nếu cấu hình JDBC + Spark)
+    Task to load data from Parquet to PostgreSQL
+    (If JDBC + Spark configured)
     """
-    logger.info("Bắt đầu load dữ liệu vào Data Warehouse")
+    logger.info("Start loading data to Data Warehouse")
     
     try:
-        logger.info("Dữ liệu được load qua Spark Write JDBC trong task Process Data")
-        logger.info("Load to Warehouse hoàn thành")
+        logger.info("Data loaded via Spark Write JDBC in Process Data task")
+        logger.info("Load to Warehouse completed")
         return True
     
     except Exception as e:
-        logger.error(f"Lỗi load: {e}")
+        logger.error(f"Load error: {e}")
         raise
 
 
@@ -241,9 +241,9 @@ task_load = PythonOperator(
 # ===== Task 6: Generate Report / Notification =====
 def generate_report(**context):
     """
-    Task tạo báo cáo và thông báo
+    Task to generate report and notification
     """
-    logger.info("Tạo báo cáo...")
+    logger.info("Generating report...")
     
     try:
         scrape_stats = context['task_instance'].xcom_pull(
@@ -275,7 +275,7 @@ def generate_report(**context):
         return True
     
     except Exception as e:
-        logger.error(f"Lỗi generate report: {e}")
+        logger.error(f"Generate report error: {e}")
         raise
 
 
@@ -287,12 +287,12 @@ task_report = PythonOperator(
 )
 
 
-# ===== Task 7: 
+# ===== Task 7: Cleanup Temp Files =====
 task_cleanup = BashOperator(
     task_id='cleanup_temp_files',
     bash_command=f"""
-    # ===== Xóa dữ liệu temp (nếu cần) =====
-    echo "Cleanup hoàn thành"
+    # ===== Delete temp data (if needed) =====
+    echo "Cleanup completed"
     """,
     dag=dag,
 )
